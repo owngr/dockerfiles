@@ -1,0 +1,66 @@
+#!/bin/sh
+
+set -e
+
+if [ -z "${PGHOST}" ]; then
+	echo >&2 "PG_HOST missing, aborting"
+	exit 1
+fi
+if [ -z "${PGUSER}" ]; then
+	echo >&2 "PGUSER missing, aborting"
+	exit 1
+fi
+if [ -z "${PGDATABASE}" ]; then
+	echo >&2 "PGDATABASE missing, aborting"
+	exit 1
+fi
+if [ -z "${DATAROOT}" ]; then
+  echo >&2 "DATAROOT missing, aborting"
+  exit 1
+fi
+
+# Infomaniak's Swiss Backup is OpenStack Swift with keystone v3 authentication
+export RESTIC_CACHE_DIR=${DATAROOT}/restic/cache
+
+tagname=data
+
+# Unlock the repository before running a new backup. This assumes that a single backup doesn't take more than a day, and that we can't run two backups simultaneously
+echo "- restic unlock"
+restic unlock || :
+
+# If the repository doesn't exist, initialize it
+if ! restic --quiet snapshots 2>/dev/null >&2; then
+	echo "- restic init"
+	restic init
+fi
+
+# Database backup
+# Expects PGHOST,PGUSER, PGPASSWORD and PGDATABASE to be set
+echo "- database dump"
+pg_dump -Fc -f${MOODLE_DATAROOT}/database.pgdump
+
+restic_limits="--limit-download=70000 --limit-upload=70000"
+
+echo "- restic backup"
+restic backup \
+	--verbose \
+	--exclude="**/cache" \
+	$restic_limits \
+	--tag $tagname \
+	"${@}" \
+	${DATAROOT}
+
+# Save last succesfully backup date
+date >${DATAROOT}/last-restic-backup.date
+
+echo "- restic forget"
+restic forget \
+	--tag $tagname \
+	--group-by paths,tags \
+	--keep-daily $DAILY_RETENTION \
+	--keep-weekly $WEEKLY_RETENTION \
+	--keep-monthly $MONTHLY_RETENTION \
+	--prune
+
+echo "- done"
+

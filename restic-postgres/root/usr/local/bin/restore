@@ -1,0 +1,46 @@
+#!/bin/sh
+
+set -e
+
+if [ -z "${PGHOST}" ]; then
+	echo >&2 "PG_HOST missing, aborting"
+	exit 1
+fi
+if [ -z "${PGUSER}" ]; then
+	echo >&2 "PGUSER missing, aborting"
+	exit 1
+fi
+if [ -z "${PGDATABASE}" ]; then
+	echo >&2 "PGDATABASE missing, aborting"
+	exit 1
+fi
+if [ -z "${DATAROOT}" ]; then
+  echo >&2 "DATAROOT missing, aborting"
+  exit 1
+fi
+
+
+# Infomaniak's Swiss Backup is OpenStack Swift with keystone v3 authentication
+export RESTIC_CACHE_DIR=${DATAROOT}/restic/cache
+
+
+if [ ! -f "${DATAROOT}/last-restic-backup.date" ] || [ -n "${FORCE_RESTORE}" ]; then
+
+	# --limit-download=0      limits downloads to a maximum rate in KiB/s. (default: unlimited)
+	# --limit-upload=0        limits uploads to a maximum rate in KiB/s. (default: unlimited)
+	# Infomaniak's Jelastic limits External network bandwidth to 100 Mbps ~ 97656 KiB/s
+	# ~ 70% of this should be plenty, round to 70'000.
+
+	restic_limits="--limit-download=70000 --limit-upload=70000"
+
+	echo "- Restore data..."
+	restic restore latest --host="${RESTORE_HOST}" --target=/
+
+	echo "- Restore moodle Database..."
+	pg_restore --clean --no-owner --role="${PGUSER}" --dbname="${PGDATABASE}" ${DATAROOT}/database.pgdump
+
+	echo "- done"
+else
+	echo "- No backup ran as data exists. use FORCE_RESTORE to restore if needed."
+fi
+
