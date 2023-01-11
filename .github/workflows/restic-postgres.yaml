@@ -38,6 +38,7 @@ jobs:
             production.cloudflare.docker.com:443
             registry-1.docker.io:443
             docker.io:443
+            deb.debian.org:443
             apt.postgresql.org:80
             www.postgresql.org:80
       - name: Source checkout
