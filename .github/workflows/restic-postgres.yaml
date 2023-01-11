@@ -79,6 +79,6 @@ jobs:
           labels: ${{ steps.docker_meta.outputs.labels }}
           tags: |
             ghcr.io/${{ env.REPOSITORY }}:${{ env.BUILD_VERSION }}
-            ghcr.io/${{ env.REPOSITORY }}:${{ env.BUILD_VERSION }}-alpine
+            ghcr.io/${{ env.REPOSITORY }}:${{ env.BUILD_VERSION }}-debian
             ghcr.io/${{ env.REPOSITORY }}:latest
           
