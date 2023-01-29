@@ -37,7 +37,7 @@ fi
 # Database backup
 # Expects PGHOST,PGUSER, PGPASSWORD and PGDATABASE to be set
 echo "- database dump"
-pg_dump -Fc -f${MOODLE_DATAROOT}/database.pgdump
+pg_dump -Fc -f ${DATAROOT}/database.pgdump
 
 restic_limits="--limit-download=70000 --limit-upload=70000"
 
