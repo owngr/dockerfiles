@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -e
+
+if [ -z "${MARIADB_HOST}" ]; then
+  echo >&2 "MARIADB_HOST missing, aborting"
+  exit 1
+fi
+if [ -z "${MARIADB_USER}" ]; then
+  echo >&2 "MARIADB_USER missing, aborting"
+  exit 1
+fi
+if [ -z "${MARIADB_DATABASE}" ]; then
+  echo >&2 "MARIADB_DATABASE missing, aborting"
+  exit 1
+if [ -z "${DATAROOT}" ]; then
+  echo >&2 "DATAROOT missing, aborting"
+  exit 1
+fi
+
+# Infomaniak's Swiss Backup is OpenStack Swift with keystone v3 authentication
+export RESTIC_CACHE_DIR=${DATAROOT}/restic/cache
+
+if [ ! -f "${DATAROOT}/last-restic-backup.date" ] || [ -n "${FORCE_RESTORE}" ]; then
+
+	# --limit-download=0      limits downloads to a maximum rate in KiB/s. (default: unlimited)
+	# --limit-upload=0        limits uploads to a maximum rate in KiB/s. (default: unlimited)
+	# ~ 70% of this should be plenty, round to 70'000.
+
+	restic_limits="--limit-download=70000 --limit-upload=70000"
+
+	echo "- Restore data..."
+	restic restore latest --host="${RESTORE_HOST}" --target=/{DATAROOT}
+
+	echo "- Restore database..."
+	mariadb < ${DATAROOT}/database.sql
+
+	echo "- done"
+else
+	echo "- No backup ran as data exists. use FORCE_RESTORE to restore if needed."
+fi
