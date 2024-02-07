@@ -1,4 +1,4 @@
-FROM debian:11-slim
+FROM debian:12-slim
 LABEL maintainer="Olivier Wenger <olivier@wngr.ch>"
 
 ARG DEBIAN_FRONTEND=noninteractive
